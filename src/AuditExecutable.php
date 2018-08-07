@@ -100,22 +100,22 @@ class AuditExecutable {
     try {
       $return = $this->test->perform();
     } catch (AuditSkipTestException $e) {
-      if ($message = trim($e->getMessage())) {
+      if ($errorMessage = trim($e->getMessage())) {
         // Skip test and save log record.
-        $return = AuditReason::create($this->test->id(), AuditResultResponseInterface::RESULT_SKIP, AuditMessagesStorageInterface::MSG_TYPE_FAIL);
+        $return = AuditReason::create($this->test->id(), AuditResultResponseInterface::RESULT_SKIP, $errorMessage);
         $this->message->display(
           $this->t(
             'Test @id was skipped. @message',
             [
               '@id' => $this->test->id(),
-              '@message' => $e->getMessage(),
+              '@message' => $errorMessage,
             ]
           ),
           'status');
       }
     }
     catch (AuditTestException $e) {
-      $return = AuditReason::create($this->test->id(), AuditResultResponseInterface::RESULT_FAIL, AuditMessagesStorageInterface::MSG_TYPE_FAIL);
+      $return = AuditReason::create($this->test->id(), AuditResultResponseInterface::RESULT_FAIL, $e->getMessage());
       $this->handleException($e);
     }
 
@@ -133,8 +133,8 @@ class AuditExecutable {
    */
   protected function handleException(\Exception $exception) {
     $result = Error::decodeException($exception);
-    $message = $result['@message'] . ' (' . $result['%file'] . ':' . $result['%line'] . ')';
-    $this->message->display($message, 'error');
+    $handledMessage = $result['@message'] . ' (' . $result['%file'] . ':' . $result['%line'] . ')';
+    $this->message->display($handledMessage, 'error');
   }
 
 }
