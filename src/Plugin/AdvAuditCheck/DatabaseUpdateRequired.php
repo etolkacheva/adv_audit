@@ -2,6 +2,8 @@
 
 namespace Drupal\adv_audit\Plugin\AdvAuditCheck;
 
+use Drupal\adv_audit\AuditReason;
+use Drupal\adv_audit\AuditResultResponseInterface;
 use Drupal\adv_audit\Plugin\AdvAuditCheckBase;
 use Drupal\adv_audit\Plugin\AdvAuditCheckInterface;
 
@@ -24,7 +26,7 @@ class DatabaseUpdateRequired extends AdvAuditCheckBase implements AdvAuditCheckI
   protected $systemManager;
 
   /**
-   * Constructs Configuration Manager Status.
+   * Constructs Database Update Required Check.
    */
   public function __construct(
     $configuration,
@@ -56,20 +58,13 @@ class DatabaseUpdateRequired extends AdvAuditCheckBase implements AdvAuditCheckI
   public function perform() {
     $requirements = $this->systemManager->listRequirements();
     if (isset($requirements['update']['severity'])) {
-      $this->setProcessStatus($this::FAIL);
-    }
-
-    /*if ($is_overriden) {
       return new AuditReason(
         $this->id(),
         AuditResultResponseInterface::RESULT_FAIL,
-        $this->t('There are differences between configurations stored in database and files.')
+        $this->t('Database need to be updated.')
       );
     }
-    else {
-      return new AuditReason($this->id(), AuditResultResponseInterface::RESULT_PASS);
-    }*/
+    return new AuditReason($this->id(), AuditResultResponseInterface::RESULT_PASS);
   }
 
 }
-
