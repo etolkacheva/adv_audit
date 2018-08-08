@@ -7,7 +7,7 @@ plugins:
     success: "<p>Success message!!</p>\r\n"
     help: 'Check cron settings.'
     impacts: "<p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Duo Reges: constructio interrete. Satis est ad hoc responsum. Quid vero? Primum quid tu dicis breve?</p>\r\n\r\n<p>&nbsp;</p>\r\n"
-  configuration_manager_status_check:
+  configuration_manager_status:
     description: '<p>Check current status of config files via configuration manager and provide the status.</p>\r\n'
     actions: '<p>Review and update configurations</p>\r\n'
     impacts: '<p>There are should not be any changes in config files because next deployment may revert all that changes. All the configuration changes on the site should be immediately imported into the configuration files through the config manager and must be updated in the project code.</p>\r\n'
@@ -21,3 +21,10 @@ plugins:
     fail: "Current Drupal core version is outdated - @version"
     success: "Current Drupal core version is up to date - @version"
     help: 'Check the Drupal core version and its actuality.'
+  features_status_check:
+    description: '<p>Features provides a centralized place to manage, configure and export components and write them to code. This convenience makes Features an excellent tool for managing changes (for Drupal7) between development environments and version control in conjunction with Git, SVN, or other version control systems.</p>\r\n'
+    actions: '<p>It is recommended to update features with the latest structure and settings done in the BO.</p>\r\n'
+    impacts: '<p>statuses overridden, needs review and rebuilding must be avoided because it means that configurations that are defined in the feature module''s code have been overridden in the Drupal backend by a user and during next execution of features revert execution (that is a part of any normal Continuous Deployment process) these changes will be lost.</p>\r\n'
+    fail: '<p>There are non-actual features on web-site.</p>\r\n'
+    success: '<p></p>\r\n'
+    help: '<p>Check if all Features are actual.</p>\r\n'
