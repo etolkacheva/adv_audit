@@ -1,12 +1,12 @@
 plugins:
   cron_settings:
-    description: "<p>Provide tool to control codebase state.</p>\r\n"
-    actions: "<p>Install and configure some advanced cron module.</p>\r\n"
+    description: 'Provide tool to control codebase state.'
+    actions: 'Install and configure some advanced cron module.'
     impatcts: 'If system cron doesn’t work or/and Drupal cron was setted up incorrectly it can lead to a lot of problems: <br><ul><li>Drupal will not provide system-wide defaults to running jobs at particular times, storing (caching) web pages to improve efficiency, and performing other essential tasks.</li> <li>Drupal will not periodically clean up log files</li> <li>application will not have a possibility automatically update feeds</li> <li>update manager will not have a possibility to check automatically pending updates</li> <li>search indexes that also uses cron will not index new/updated content and many other points</li></ul>'
-    fail: "<p>Its fail message49</p>\r\n"
-    success: "<p>Success message!!</p>\r\n"
+    fail: 'Its fail message49'
+    success: 'Success message!!'
     help: 'Check cron settings.'
-    impacts: "<p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Duo Reges: constructio interrete. Satis est ad hoc responsum. Quid vero? Primum quid tu dicis breve?</p>\r\n\r\n<p>&nbsp;</p>\r\n"
+    impacts: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Duo Reges: constructio interrete. Satis est ad hoc responsum. Quid vero? Primum quid tu dicis breve?'
   configuration_manager_status:
     description: 'Check current status of config files via configuration manager and provide the status.'
     actions: 'Review and update configurations'
@@ -15,11 +15,11 @@ plugins:
     success: 'All config files are actual.'
     help: 'Check non-security updates for modules.'
   drupal_core:
-    description: "Check the Drupal core version and its actuality."
-    actions: "Enable core aggregation or use @link (that includes all latest security updates)."
-    impatcts: 'If you don’t monitor for new versions and ignore core updates, your application is in danger as hackers follow security-related incidents (which have to be published as soon as they''re discovered) and try to exploit the known vulnerabilities. Also each new version of the Drupal core contains bug fixes, which increases the stability of the entire platform.'
-    fail: "Current Drupal core version is outdated - @version"
-    success: "Current Drupal core version is up to date - @version"
+    description: 'Check the Drupal core version and its actuality.'
+    actions: 'Enable core aggregation or use @link (that includes all latest security updates).'
+    impacts: 'If you don''t monitor for new versions and ignore core updates, your application is in danger as hackers follow security-related incidents (which have to be published as soon as they''re discovered) and try to exploit the known vulnerabilities. Also each new version of the Drupal core contains bug fixes, which increases the stability of the entire platform.'
+    fail: 'Current Drupal core version is outdated - @version'
+    success: 'Current Drupal core version is up to date - @version'
     help: 'Check the Drupal core version and its actuality.'
   features_status_check:
     description: 'Features provides a centralized place to manage, configure and export components and write them to code. This convenience makes Features an excellent tool for managing changes (for Drupal7) between development environments and version control in conjunction with Git, SVN, or other version control systems.'
@@ -28,3 +28,24 @@ plugins:
     fail: 'There are non-actual features on web-site.'
     success: ''
     help: 'Check if all Features are actual.'
+  modules_security_check:
+    description: 'Once the new security update for the module is released it would be the responsibility of each Drupal site owner to keep their site updated.'
+    actions: '@link are @count modules with security updates. These modules must be updated as soon as possible. @list'
+    impacts: 'If you don''t monitor for new versions and ignore contrib updates, your application is in danger as hackers follow security-related incidents (which have to be published as soon as they''re discovered) and try to exploit the known vulnerabilities. So it''s very important to keep application fully updated especially when exists security updates and stable versions of contrib modules.'
+    fail: 'There are outdated modules with security updates.'
+    success: 'All modules are up-to-date.'
+    help: 'Check security updates for contrib modules.'
+  database_update_required:
+    description: 'Check database state.'
+    actions: 'Apply all pending database updates.'
+    impacts: 'This point is very important and if do not apply all pending database updates for all modules it can lead to unstable work of project and finally can broke website at all.'
+    fail: 'Database need to be updated.'
+    success: 'Up to date.'
+    help: 'Check database state.'
+  modules_update_check:
+    description: 'The contributed modules should be last stable version as there might a new feature upgrade, some new functionality and bug fixes. It''s important to keep modules up-to-date and prevent any problems with compatibility of code (php version, and with other modules) and bugs. Also it’s important to update modules to stable releases (if exists).'
+    actions: '@link are @count with non-security updates. Apply all updates (we recommend apply only stable releases). @list'
+    impacts: 'Ignoring non-security (normal) updates may lead to compatibility issues between modules in a project. Let''s imagine you had to update a single module because of the critical security flaw in it. However, as you haven''t updated it for a while, as well as other modules in a project, a maintainer introduced a few API changes since then. So now, when you apply the security update, you will immediately face the compatibility problem.'
+    fail: 'There are outdated modules with non-security updates.'
+    success: 'All modules are up-to-date.'
+    help: 'Check non-security updates for modules.'
