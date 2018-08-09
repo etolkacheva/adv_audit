@@ -16,7 +16,11 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  *   label = @Translation("Features status"),
  *   category = "core_and_modules",
  *   severity = "low",
- *   requirements = {},
+ *   requirements = {
+ *     "module": {
+ *       "features",
+ *     },
+ *   },
  *   enabled = TRUE,
  * )
  */
