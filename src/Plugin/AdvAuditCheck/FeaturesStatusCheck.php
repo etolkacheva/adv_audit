@@ -4,6 +4,7 @@ namespace Drupal\adv_audit\Plugin\AdvAuditCheck;
 
 use Drupal\adv_audit\AuditReason;
 use Drupal\adv_audit\AuditResultResponseInterface;
+use Drupal\adv_audit\Message\AuditMessagesStorageInterface;
 use Drupal\adv_audit\Plugin\AdvAuditCheckBase;
 use Drupal\adv_audit\Plugin\AdvAuditCheckInterface;
 
@@ -63,48 +64,38 @@ class FeaturesStatusCheck extends AdvAuditCheckBase implements AdvAuditCheckInte
     $current_bundle = $this->featuresAssigner->getBundle();
     $this->featuresAssigner->assignConfigPackages();
     $packages = $this->featuresManager->getPackages();
-    $config_collection = $this->featuresManager->getConfigCollection();
-    $this->addUnpackaged($packages, $config_collection);
+
     $packages = $this->featuresManager->filterPackages($packages, $current_bundle->getMachineName());
+
+    $overridenPackages = array();
+
     foreach ($packages as $package) {
-      if (!$package->getStatus() == FeaturesManagerInterface::STATUS_INSTALLED && $this->featuresManager->detectOverrides($package, TRUE)) {
-        return new AuditReason($this->id(), AuditResultResponseInterface::RESULT_FAIL, '', ['testKey' => 'testValue']);
+      if ($package->getStatus() == FeaturesManagerInterface::STATUS_INSTALLED && !empty($this->featuresManager->detectOverrides($package))) {
+        $overridenPackages[] = $package->getName();
       }
     }
+
+    if (!empty($overridenPackages)) {
+      return new AuditReason($this->id(), AuditResultResponseInterface::RESULT_FAIL, NULL, $overridenPackages);
+    }
+
     return new AuditReason($this->id(), AuditResultResponseInterface::RESULT_PASS);
   }
 
+  /**
+   * {@inheritdoc}
+   */
   public function auditReportRender(AuditReason $reason, $type) {
-
-    if ($type == AuditResultResponseInterface::RESULT_FAIL) {
-      $argc = $reason->getArguments();
-      return ['#markup' => 'My HTML result. '];
+    if ($type == AuditMessagesStorageInterface::MSG_TYPE_FAIL) {
+      $build['features_list_fails'] = [
+        '#theme' => 'item_list',
+        '#title' => $this->t('Failed features'),
+        '#list_type' => 'ol',
+        '#items' => $reason->getArguments(),
+      ];
+      return $build;
     }
     return [];
-
-  }
-
-  /**
-   * Adds a pseudo-package to display unpackaged configuration.
-   *
-   * @param array $packages
-   *   An array of package names.
-   * @param \Drupal\features\ConfigurationItem[] $config_collection
-   *   A collection of configuration.
-   */
-  protected function addUnpackaged(array &$packages, array $config_collection) {
-    $packages['unpackaged'] = new Package('unpackaged', [
-      'name' => $this->t('Unpackaged'),
-      'description' => $this->t('Configuration that has not been added to any package.'),
-      'config' => [],
-      'status' => FeaturesManagerInterface::STATUS_NO_EXPORT,
-      'version' => '',
-    ]);
-    foreach ($config_collection as $item_name => $item) {
-      if (!$item->getPackage() && !$item->isExcluded() && !$item->isProviderExcluded()) {
-        $packages['unpackaged']->appendConfig($item_name);
-      }
-    }
   }
 
 }
