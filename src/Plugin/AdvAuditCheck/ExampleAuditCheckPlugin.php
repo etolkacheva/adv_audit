@@ -113,6 +113,7 @@ class ExampleAuditCheckPlugin extends AdvAuditCheckBase implements ContainerFact
    * {@inheritdoc}
    */
   public function configFormSubmit($form, FormStateInterface $form_state) {
+    // Get value from form_state object and save it.
     $value = $form_state->getValue(['additional_settings', 'plugin_config', 'check_should_passed'], 0);
     $this->state->set($this->buildStateConfigKey(), $value);
   }
@@ -121,6 +122,8 @@ class ExampleAuditCheckPlugin extends AdvAuditCheckBase implements ContainerFact
    * {@inheritdoc}
    */
   public function checkRequirements() {
+    // Please be careful.
+    // Before extend check Requirements method you should call parent method before.
     parent::checkRequirements();
     // Check our custom requirements for plugin.
     if ($this->state->get('install_task') != 'done') {
@@ -133,8 +136,10 @@ class ExampleAuditCheckPlugin extends AdvAuditCheckBase implements ContainerFact
    */
   public function auditReportRender(AuditReason $reason, $type) {
     switch ($type) {
+      // Override messages fail output.
+      // In this case, we will not use messages from messages.yml file and directly will render what you return.
       case AuditMessagesStorageInterface::MSG_TYPE_FAIL:
-        return [
+        $build = [
           '#type' => 'container',
           '#attributes' => [
             'class' => ['custom-fail-color'],
@@ -144,9 +149,10 @@ class ExampleAuditCheckPlugin extends AdvAuditCheckBase implements ContainerFact
           ],
         ];
         break;
-
+      // Override messages success output.
+      // At this moment you have fully control what how will build success messages.
       case AuditMessagesStorageInterface::MSG_TYPE_SUCCESS:
-        return [
+        $build = [
           '#type' => 'container',
           '#attributes' => [
             'class' => ['custom-pass-color'],
@@ -158,9 +164,13 @@ class ExampleAuditCheckPlugin extends AdvAuditCheckBase implements ContainerFact
         break;
 
       default:
+        // Return empty array.
+        // In this case will display messages from messages.yml file for you plugin.
+        $build = [];
         break;
     }
-    return [];
+
+    return $build;
   }
 
 }
