@@ -70,7 +70,7 @@ class FeaturesStatusCheck extends AdvAuditCheckBase implements AdvAuditCheckInte
     $overridenPackages = array();
 
     foreach ($packages as $package) {
-      if ($package->getStatus() == FeaturesManagerInterface::STATUS_INSTALLED && !empty($this->featuresManager->detectOverrides($package))) {
+      if (!empty($this->featuresManager->detectOverrides($package))) {
         $overridenPackages[] = $package->getName();
       }
     }
