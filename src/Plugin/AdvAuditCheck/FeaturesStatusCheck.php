@@ -7,12 +7,11 @@ use Drupal\adv_audit\AuditResultResponseInterface;
 use Drupal\adv_audit\Message\AuditMessagesStorageInterface;
 use Drupal\adv_audit\Plugin\AdvAuditCheckBase;
 use Drupal\adv_audit\Plugin\AdvAuditCheckInterface;
+use Drupal\adv_audit\Renderer\AdvAuditReasonRenderableInterface;
 
 use Drupal\Core\Plugin\ContainerFactoryPluginInterface;
 use Drupal\features\FeaturesAssigner;
 use Drupal\features\FeaturesManager;
-use Drupal\features\FeaturesManagerInterface;
-use Drupal\features\Package;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
@@ -29,7 +28,7 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  *   enabled = TRUE,
  * )
  */
-class FeaturesStatusCheck extends AdvAuditCheckBase implements AdvAuditCheckInterface, ContainerFactoryPluginInterface {
+class FeaturesStatusCheck extends AdvAuditCheckBase implements AdvAuditCheckInterface, ContainerFactoryPluginInterface, AdvAuditReasonRenderableInterface {
 
   protected $featuresManager;
 
