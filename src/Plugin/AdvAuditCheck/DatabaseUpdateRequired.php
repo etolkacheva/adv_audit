@@ -23,6 +23,11 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  */
 class DatabaseUpdateRequired extends AdvAuditCheckBase implements AdvAuditCheckInterface, ContainerFactoryPluginInterface {
 
+  /**
+   * System Manager Container.
+   *
+   * @var \Drupal\system\SystemManager
+   */
   protected $systemManager;
 
   /**
@@ -60,8 +65,7 @@ class DatabaseUpdateRequired extends AdvAuditCheckBase implements AdvAuditCheckI
     if (isset($requirements['update']['severity'])) {
       return new AuditReason(
         $this->id(),
-        AuditResultResponseInterface::RESULT_FAIL,
-        $this->t('Database need to be updated.')
+        AuditResultResponseInterface::RESULT_FAIL
       );
     }
     return new AuditReason($this->id(), AuditResultResponseInterface::RESULT_PASS);
