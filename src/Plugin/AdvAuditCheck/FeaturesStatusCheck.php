@@ -28,7 +28,7 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  *   enabled = TRUE,
  * )
  */
-class FeaturesStatusCheck extends AdvAuditCheckBase implements AdvAuditCheckInterface, ContainerFactoryPluginInterface, AdvAuditReasonRenderableInterface {
+class FeaturesStatusCheck extends AdvAuditCheckBase implements ContainerFactoryPluginInterface, AdvAuditReasonRenderableInterface {
 
   protected $featuresManager;
 
