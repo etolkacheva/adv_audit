@@ -6,7 +6,9 @@ use Drupal\adv_audit\Plugin\AdvAuditCheckBase;
 use Drupal\adv_audit\AuditReason;
 use Drupal\adv_audit\AuditResultResponseInterface;
 
+use Drupal\Core\Link;
 use Drupal\field\Entity\FieldConfig;
+use Symfony\Component\Routing\Exception\RouteNotFoundException;
 
 /**
  * Unsafe extensions Check plugin class.
@@ -26,6 +28,8 @@ class UnsafeExtensionsCheck extends AdvAuditCheckBase {
    * {@inheritdoc}
    */
   public function perform() {
+    $fields = [];
+    $params = [];
     $unsafe_ext = [
       'swf',
       'exe',
@@ -40,56 +44,62 @@ class UnsafeExtensionsCheck extends AdvAuditCheckBase {
       'vbs',
     ];
     $status = AuditResultResponseInterface::RESULT_PASS;
-    $findings = [];
 
     // Check field configuration entities.
     foreach (FieldConfig::loadMultiple() as $entity) {
       $extensions = $entity->getSetting('file_extensions');
       if ($extensions != NULL) {
         $extensions = explode(' ', $extensions);
-        $intersect = array_intersect($extensions, $unsafe_ext);
-        foreach ($intersect as $unsafe_extension) {
-          $findings[$entity->id()][] = $unsafe_extension;
+        $unsafe_exts = array_intersect($extensions, $unsafe_ext);
+        foreach ($unsafe_exts as $unsafe_extension) {
+          $fields[$entity->id()][] = $unsafe_extension;
         }
       }
     }
 
-    /*if (!empty($findings)) {
-      $result = CheckResult::FAIL;
-    }
-    $items = [];
-    foreach ($findings as $entity_id => $unsafe_extensions) {
-      $entity = FieldConfig::load($entity_id);
+    if (!empty($fields)) {
+      $items = [];
+      $status = AuditResultResponseInterface::RESULT_FAIL;
 
+      foreach ($fields as $entity_id => $unsafe_extensions) {
+        $entity = FieldConfig::load($entity_id);
 
-      foreach ($unsafe_extensions as $extension) {
-        $item = $this->t(
-          'Review @type in <em>@field</em> field on @bundle',
-          [
-            '@type' => $extension,
-            '@field' => $entity->label(),
-            '@bundle' => $entity->getTargetBundle(),
-          ]
-        );
-
-        // Try to get an edit url.
-        try {
-          $url_params = ['field_config' => $entity->id()];
-          if ($entity->getTargetEntityTypeId() == 'node') {
-            $url_params['node_type'] = $entity->getTargetBundle();
-          }
-          $items[] = Link::createFromRoute(
-            $item,
-            sprintf('entity.field_config.%s_field_edit_form', $entity->getTargetEntityTypeId()),
-            $url_params
+        foreach ($unsafe_extensions as $extension) {
+          $item = $this->t(
+            'Review @type in <em>@field</em> field on @bundle',
+            [
+              '@type' => $extension,
+              '@field' => $entity->label(),
+              '@bundle' => $entity->getTargetBundle(),
+            ]
           );
-        }
-        catch (RouteNotFoundException $e) {
-          $items[] = $item;
+
+          // Try to get an edit url.
+          try {
+            $url_params = ['field_config' => $entity->id()];
+            if ($entity->getTargetEntityTypeId() == 'node') {
+              $url_params['node_type'] = $entity->getTargetBundle();
+            }
+            $items[] = Link::createFromRoute(
+              $item,
+              sprintf('entity.field_config.%s_field_edit_form', $entity->getTargetEntityTypeId()),
+              $url_params
+            );
+          }
+          catch (RouteNotFoundException $e) {
+            $items[] = $item;
+          }
         }
       }
-    }*/
-    return new AuditReason($this->id(), $status, NULL, []);
+      $list = [
+        '#theme' => 'item_list',
+        '#items' => $items,
+      ];
+
+      $params = ['%fields' => drupal_render($list)];
+    }
+
+    return new AuditReason($this->id(), $status, NULL, $params);
   }
 
 }
