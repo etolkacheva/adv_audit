@@ -91,15 +91,31 @@ class UnsafeExtensionsCheck extends AdvAuditCheckBase {
           }
         }
       }
-      $list = [
-        '#theme' => 'item_list',
-        '#items' => $items,
-      ];
 
-      $params = ['%fields' => drupal_render($list)];
+      $params = ['fields' => $items];
     }
 
     return new AuditReason($this->id(), $status, NULL, $params);
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function auditReportRender(AuditReason $reason, $type) {
+    if ($type == AuditMessagesStorageInterface::MSG_TYPE_FAIL) {
+      $arguments = $reason->getArguments();
+      if (!empty($arguments['fields'])) {
+        $build['unsafe_extensions'] = [
+          '#theme' => 'item_list',
+          '#title' => $this->t('Fields with unsafe extensions:'),
+          '#list_type' => 'ul',
+          '#items' => $arguments['fields'],
+        ];
+        return $build;
+      }
+    }
+
+    return [];
   }
 
 }
