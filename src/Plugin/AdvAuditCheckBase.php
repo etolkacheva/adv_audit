@@ -7,7 +7,6 @@ use Drupal\adv_audit\Exception\RequirementsException;
 use Drupal\adv_audit\AuditResultResponseInterface;
 use Drupal\Component\Plugin\PluginBase;
 use Drupal\Core\Config\ConfigFactoryInterface;
-use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 
 /**
@@ -167,41 +166,6 @@ abstract class AdvAuditCheckBase extends PluginBase implements AdvAuditCheckInte
    */
   public function setSeverityLevel($level) {
     $this->pluginSettingsStorage->set('severity', $level);
-  }
-
-  /**
-   * Additional configuration form for plugin instance.
-   *
-   * Value will be store in state storage and can be uses bu next key:
-   * - adv_audit.plugin.PLUGIN_ID.config.KEY.
-   *
-   * @return array
-   *   The form structure.
-   */
-  public function configForm() {
-    return [];
-  }
-
-  /**
-   * Config form submission handler.
-   *
-   * @param array $form
-   *   An associative array containing the structure of the form.
-   * @param \Drupal\Core\Form\FormStateInterface $form_state
-   *   The current state of the form.
-   */
-  public function configFormSubmit(array $form, FormStateInterface $form_state) {
-  }
-
-  /**
-   * Config form validate handler.
-   *
-   * @param array $form
-   *   An associative array containing the structure of the form.
-   * @param \Drupal\Core\Form\FormStateInterface $form_state
-   *   The current state of the form.
-   */
-  public function configFormValidate(array $form, FormStateInterface $form_state) {
   }
 
   /**
