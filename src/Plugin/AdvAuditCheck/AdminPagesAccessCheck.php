@@ -6,6 +6,7 @@ use Drupal\adv_audit\Plugin\AdvAuditCheckBase;
 
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Plugin\ContainerFactoryPluginInterface;
+use Drupal\Core\Plugin\PluginFormInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Drupal\Component\Utility\UrlHelper;
 use GuzzleHttp\Client;
@@ -25,7 +26,7 @@ use Symfony\Component\HttpFoundation\Request;
  *   severity = "high"
  * )
  */
-class AdminPagesAccessCheck extends AdvAuditCheckBase implements ContainerFactoryPluginInterface {
+class AdminPagesAccessCheck extends AdvAuditCheckBase implements ContainerFactoryPluginInterface, PluginFormInterface {
 
   /**
    * Predefined URLs list.
@@ -95,54 +96,93 @@ class AdminPagesAccessCheck extends AdvAuditCheckBase implements ContainerFactor
   }
 
   /**
-   * {@inheritdoc}
+   * Form constructor.
+   *
+   * Plugin forms are embedded in other forms. In order to know where the plugin
+   * form is located in the parent form, #parents and #array_parents must be
+   * known, but these are not available during the initial build phase. In order
+   * to have these properties available when building the plugin form's
+   * elements, let this method return a form element that has a #process
+   * callback and build the rest of the form in the callback. By the time the
+   * callback is executed, the element's #parents and #array_parents properties
+   * will have been set by the form API. For more documentation on #parents and
+   * #array_parents, see \Drupal\Core\Render\Element\FormElement.
+   *
+   * @param array $form
+   *   An associative array containing the initial structure of the plugin form.
+   * @param \Drupal\Core\Form\FormStateInterface $form_state
+   *   The current state of the form. Calling code should pass on a subform
+   *   state created through
+   *   \Drupal\Core\Form\SubformState::createForSubform().
+   *
+   * @return array
+   *   The form structure.
    */
-  public function configForm() {
+  public function buildConfigurationForm(array $form, FormStateInterface $form_state) {
+    $current_urls = $this->state->get($this->buildStateConfigKey());
+    if (!isset($current_urls)) {
+      $current_urls = implode("\n", self::URLS);
+    }
     $form['urls'] = [
       '#type' => 'textarea',
       '#title' => $this->t('URLs for access checking'),
       '#description' => t(
         'Place one URL(relative) per line as relative with preceding slash, i.e /path/to/page.
-         <br />Predefined URLs: @urls
+         <br/>
          <br />Entity id placeholder(one per URL) can be used in format {entity:<entity_type>}, i.e. /taxonomy/term/{entity:taxonomy_term}',
         ['@urls' => implode(', ', self::URLS)]
       ),
-      '#default_value' => $this->state->get($this->buildStateConfigKey()),
-      '#required' => TRUE,
+      '#default_value' => $current_urls,
     ];
 
     return $form;
   }
 
   /**
-   * {@inheritdoc}
+   * Form validation handler.
+   *
+   * @param array $form
+   *   An associative array containing the structure of the plugin form as built
+   *   by static::buildConfigurationForm().
+   * @param \Drupal\Core\Form\FormStateInterface $form_state
+   *   The current state of the form. Calling code should pass on a subform
+   *   state created through
+   *   \Drupal\Core\Form\SubformState::createForSubform().
    */
-  public function configFormValidate(array $form, FormStateInterface $form_state) {
-    $value_name = ['additional_settings', 'plugin_config', 'urls'];
-    $urls = $this->parseLines($form_state->getValue($value_name));
+  public function validateConfigurationForm(array &$form, FormStateInterface $form_state) {
+    $urls = $this->parseLines($form_state->getValue(['urls']));
+
+    if (empty($urls)) {
+      // Nothing to do here.
+      $error_msg = $this->t('At least one URL is required. Otherwise disable the plugin.');
+      $form_state->setError($form['urls'], $error_msg);
+      return;
+    }
 
     foreach ($urls as $url) {
+      $url = $this->replaceEntityPlaceholder($url);
       if (!UrlHelper::isValid($url) || substr($url, 0, 1) !== '/') {
-        $form_state->setErrorByName('additional_settings][plugin_config][urls', $this->t('Urls should be given as relative with preceding slash.'));
-        break;
-      }
-
-      if (in_array($url, self::URLS)) {
-        $form_state->setErrorByName(
-          'additional_settings][plugin_config][urls',
-          $this->t('Url @url already stored as predefined.', ['@url' => $url])
-        );
+        $error_msg = $this->t('Please provide valid URLs, one per line. Each URL should be given as relative with preceding slash.');
+        $form_state->setError($form['urls'], $url);
+        $form_state->setError($form['urls'], $error_msg);
         break;
       }
     }
   }
 
   /**
-   * {@inheritdoc}
+   * Form submission handler.
+   *
+   * @param array $form
+   *   An associative array containing the structure of the plugin form as built
+   *   by static::buildConfigurationForm().
+   * @param \Drupal\Core\Form\FormStateInterface $form_state
+   *   The current state of the form. Calling code should pass on a subform
+   *   state created through
+   *   \Drupal\Core\Form\SubformState::createForSubform().
    */
-  public function configFormSubmit(array $form, FormStateInterface $form_state) {
-    $value_name = ['additional_settings', 'plugin_config', 'urls'];
-    $value = $form_state->getValue($value_name);
+  public function submitConfigurationForm(array &$form, FormStateInterface $form_state) {
+    $value = $form_state->getValue(['urls']);
     $this->state->set($this->buildStateConfigKey(), $value);
   }
 
@@ -211,22 +251,28 @@ class AdminPagesAccessCheck extends AdvAuditCheckBase implements ContainerFactor
    *   Thrown if the storage handler couldn't be loaded.
    */
   private function replaceEntityPlaceholder($url) {
-    preg_match_all('/{entity:(.*?)}/', $url, $entity_type);
-    if (empty($entity_type[1][0])) {
+    try {
+      preg_match_all('/{entity:(.*?)}/', $url, $entity_type);
+      if (empty($entity_type[1][0])) {
+        return $url;
+      }
+
+      $storage = $this->entityTypeManager->getStorage($entity_type[1][0]);
+      $query = $storage->getQuery();
+      $query->range(0, 1);
+      $res = $query->execute();
+
+      $entity_id = count($res) ? reset($res) : NULL;
+      if (empty($entity_id)) {
+        return $url;
+      }
+
+      return preg_replace('/{entity:.*?}/', $entity_id, $url);
+    }
+    catch (\Exception $e) {
       return $url;
     }
 
-    $storage = $this->entityTypeManager->getStorage($entity_type[1][0]);
-    $query = $storage->getQuery();
-    $query->range(0, 1);
-    $res = $query->execute();
-
-    $entity_id = count($res) ? reset($res) : NULL;
-    if (empty($entity_id)) {
-      return $url;
-    }
-
-    return preg_replace('/{entity:.*?}/', $entity_id, $url);
   }
 
   /**

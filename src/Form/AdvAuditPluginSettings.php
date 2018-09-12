@@ -8,13 +8,16 @@ use Drupal\adv_audit\Message\AuditMessageCapture;
 use Drupal\adv_audit\Message\AuditMessagesStorageInterface;
 use Drupal\adv_audit\Plugin\AdvAuditCheckInterface;
 use Drupal\adv_audit\Plugin\AdvAuditCheckManager;
+use Drupal\adv_audit\Renderer\AdvAuditReasonRenderableInterface;
 use Drupal\Core\Form\FormBase;
 use Drupal\Core\Form\FormStateInterface;
-use Drupal\adv_audit\Renderer\AdvAuditReasonRenderableInterface;
+use Drupal\Core\Plugin\PluginFormInterface;
+use Drupal\Core\Form\SubformState;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Drupal\Core\Session\AccountInterface;
 use Drupal\Core\Access\AccessResult;
+use Drupal\Component\Utility\Html;
 
 /**
  * Provides implementation for the Run form.
@@ -118,6 +121,27 @@ class AdvAuditPluginSettings extends FormBase {
       '#default_value' => $this->pluginInstance->getSeverityLevel(),
     ];
 
+    if ($this->pluginInstance instanceof PluginFormInterface) {
+      $processor_id = $this->pluginId;
+      $form['settings'][$processor_id] = [
+        '#type' => 'details',
+        '#title' => $this->pluginInstance->label(),
+        '#open' => TRUE,
+        '#group' => 'processor_settings',
+        '#parents' => [$processor_id, 'settings'],
+        '#attributes' => [
+          'class' => [
+            'audit-processor-settings-' . Html::cleanCssIdentifier($processor_id),
+          ],
+        ],
+      ];
+      $processor_form_state = SubformState::createForSubform($form['settings'][$processor_id], $form, $form_state);
+      $form['settings'][$processor_id] += $this->pluginInstance->buildConfigurationForm($form['settings'][$processor_id], $processor_form_state);
+    }
+    else {
+      unset($form['settings'][$processor_id]);
+    }
+
     $form['messages'][AuditMessagesStorageInterface::MSG_TYPE_DESCRIPTION] = [
       '#type' => 'text_format',
       '#title' => $this->t('Description'),
@@ -152,15 +176,6 @@ class AdvAuditPluginSettings extends FormBase {
       '#default_value' => $this->messageStorage->get($this->pluginId, AuditMessagesStorageInterface::MSG_TYPE_SUCCESS),
     ];
 
-    if ($additional_form = $this->pluginInstance->configForm()) {
-      $form['additional_settings'] = [
-        '#type' => 'fieldset',
-        '#title' => $this->t('Specific plugin settings'),
-        '#tree' => TRUE,
-        'plugin_config' => $additional_form,
-      ];
-    }
-
     $form['submit'] = [
       '#type' => 'submit',
       '#value' => $this->t('Save plugin configuration'),
@@ -176,6 +191,46 @@ class AdvAuditPluginSettings extends FormBase {
     ];
 
     return $form;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function validateForm(array &$form, FormStateInterface $form_state) {
+    parent::validateForm($form, $form_state);
+
+    // Iterate over all processors that have a form and are enabled.
+    if ($this->pluginInstance instanceof PluginFormInterface) {
+      $processor_id = $this->pluginId;
+      $processor_form_state = SubformState::createForSubform($form['settings'][$processor_id], $form, $form_state);
+      $this->pluginInstance->validateConfigurationForm($form['settings'][$processor_id], $processor_form_state);
+    }
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function submitForm(array &$form, FormStateInterface $form_state) {
+    $this->pluginInstance->setPluginStatus($form_state->getValue('status'));
+    $this->pluginInstance->setSeverityLevel($form_state->getValue('severity'));
+    foreach ($form_state->getValue('messages', []) as $type => $text) {
+      $this->messageStorage->set($this->pluginId, $type, $text['value']);
+    }
+
+    // Handle plugin config form submit.
+    if ($this->pluginInstance instanceof PluginFormInterface) {
+      $processor_id = $this->pluginId;
+      $processor_form_state = SubformState::createForSubform($form['settings'][$processor_id], $form, $form_state);
+      $this->pluginInstance->submitConfigurationForm($form['settings'][$processor_id], $processor_form_state);
+    }
+  }
+
+  /**
+   * Checks if the user has access for edit this plugin.
+   */
+  public function checkAccess(AccountInterface $account) {
+    $id = $this->pluginInstance->getCategoryName();
+    return AccessResult::allowedIfHasPermission($account, "adv_audit category $id edit");
   }
 
   /**
@@ -200,35 +255,6 @@ class AdvAuditPluginSettings extends FormBase {
       // If needed you can add call to ::auditReportRender for test.
     }
 
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function submitForm(array &$form, FormStateInterface $form_state) {
-    $this->pluginInstance->setPluginStatus($form_state->getValue('status'));
-    $this->pluginInstance->setSeverityLevel($form_state->getValue('severity'));
-    foreach ($form_state->getValue('messages', []) as $type => $text) {
-      $this->messageStorage->set($this->pluginId, $type, $text['value']);
-    }
-
-    // Handle plugin config form submit.
-    $this->pluginInstance->configFormSubmit($form, $form_state);
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function validateForm(array &$form, FormStateInterface $form_state) {
-    $this->pluginInstance->configFormValidate($form, $form_state);
-  }
-
-  /**
-   * Checks if the user has access for edit this plugin.
-   */
-  public function checkAccess(AccountInterface $account) {
-    $id = $this->pluginInstance->getCategoryName();
-    return AccessResult::allowedIfHasPermission($account, "adv_audit category $id edit");
   }
 
 }
